@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام نقطة البيع الذكي | Smart POS</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#2c3e50">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://unpkg.com/@zxing/library@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <i class="fa-solid fa-cash-register"></i>
+                <h1>Smart POS</h1>
+            </div>
+            <nav class="main-nav">
+                <button class="nav-btn active" data-target="pos">
+                    <i class="fa-solid fa-store"></i>
+                    <span>نقطة البيع</span>
+                </button>
+                <button class="nav-btn" data-target="products">
+                    <i class="fa-solid fa-box-open"></i>
+                    <span>المنتجات</span>
+                </button>
+                <button class="nav-btn" data-target="sales">
+                    <i class="fa-solid fa-receipt"></i>
+                    <span>المبيعات</span>
+                </button>
+                <button class="nav-btn" data-target="dashboard">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>الإحصائيات</span>
+                </button>
+                <button class="nav-btn" data-target="settings">
+                    <i class="fa-solid fa-gear"></i>
+                    <span>الإعدادات</span>
+                </button>
+            </nav>
+            <div class="user-info">
+                <div class="avatar">
+                    <i class="fa-solid fa-user"></i>
+                </div>
+                <div class="details">
+                    <span class="name">الكاشير</span>
+                    <span class="status">متصل</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- POS Section -->
+            <section id="pos" class="section active">
+                <div class="pos-layout">
+                    <div class="products-area">
+                        <div class="pos-header">
+                            <div class="search-bar">
+                                <i class="fa-solid fa-search"></i>
+                                <input type="text" id="pos-search" placeholder="بحث عن منتج (F1)...">
+                            </div>
+                            <button class="btn-icon" id="scan-btn" title="مسح باركود (F2)">
+                                <i class="fa-solid fa-barcode"></i>
+                            </button>
+                            <div class="categories-filter" id="categories-filter">
+                                <button class="cat-btn active" data-cat="all">الكل</button>
+                                <!-- Categories injected here -->
+                            </div>
+                        </div>
+                        <div class="products-grid" id="products-grid">
+                            <!-- Products injected here -->
+                        </div>
+                    </div>
+                    <div class="cart-area" id="cart-area">
+                        <div class="cart-header">
+                            <h3>سلة المشتريات</h3>
+                            <button class="btn-icon mobile-only" id="close-cart-btn">
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </button>
+                            <button class="btn-text text-danger" id="clear-cart">
+                                <i class="fa-solid fa-trash"></i> مسح
+                            </button>
+                        </div>
+                        <div class="cart-items" id="cart-items">
+                            <!-- Cart items injected here -->
+                            <div class="empty-cart">
+                                <i class="fa-solid fa-basket-shopping"></i>
+                                <p>السلة فارغة</p>
+                            </div>
+                        </div>
+                        <div class="cart-summary">
+                            <div class="summary-row">
+                                <span>المجموع الفرعي</span>
+                                <span id="subtotal">0.00</span>
+                            </div>
+                            <div class="summary-row">
+                                <span>الضريبة (15%)</span>
+                                <span id="tax">0.00</span>
+                            </div>
+                            <div class="summary-row total">
+                                <span>الإجمالي</span>
+                                <span id="total">0.00</span>
+                            </div>
+                            <div class="cart-actions">
+                                <button class="btn btn-secondary" id="park-sale">
+                                    <i class="fa-solid fa-pause"></i> تعليق
+                                </button>
+                                <button class="btn btn-primary" id="checkout-btn">
+                                    <i class="fa-solid fa-money-bill-wave"></i> دفع (F4)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Mobile Cart Summary Bar -->
+                <div class="mobile-cart-bar" id="mobile-cart-bar">
+                    <div class="cart-info">
+                        <span class="count-badge" id="mobile-cart-count">0</span>
+                        <span class="total-amount" id="mobile-cart-total">0.00</span>
+                    </div>
+                    <button class="btn btn-primary" id="view-cart-btn">
+                        عرض السلة <i class="fa-solid fa-chevron-up"></i>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Products Section -->
+            <section id="products" class="section">
+                <div class="section-header">
+                    <h2>إدارة المنتجات</h2>
+                    <div class="actions">
+                        <button class="btn btn-secondary" id="import-products">
+                            <i class="fa-solid fa-file-import"></i> استيراد
+                        </button>
+                        <button class="btn btn-primary" id="add-product-btn">
+                            <i class="fa-solid fa-plus"></i> منتج جديد
+                        </button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>الصورة</th>
+                                <th>الاسم</th>
+                                <th>الباركود</th>
+                                <th>الفئة</th>
+                                <th>السعر</th>
+                                <th>المخزون</th>
+                                <th>إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="products-table-body">
+                            <!-- Products rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Sales Section -->
+            <section id="sales" class="section">
+                <div class="section-header">
+                    <h2>سجل المبيعات</h2>
+                    <div class="actions">
+                        <input type="date" id="sales-date-filter" class="form-input">
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>رقم الفاتورة</th>
+                                <th>التاريخ</th>
+                                <th>عدد العناصر</th>
+                                <th>الإجمالي</th>
+                                <th>طريقة الدفع</th>
+                                <th>إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sales-table-body">
+                            <!-- Sales rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="section">
+                <div class="section-header">
+                    <h2>لوحة الإحصائيات</h2>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="icon blue"><i class="fa-solid fa-money-bill"></i></div>
+                        <div class="info">
+                            <h3>مبيعات اليوم</h3>
+                            <p id="today-sales">0.00</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="icon green"><i class="fa-solid fa-calendar-check"></i></div>
+                        <div class="info">
+                            <h3>مبيعات الشهر</h3>
+                            <p id="month-sales">0.00</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="icon purple"><i class="fa-solid fa-box"></i></div>
+                        <div class="info">
+                            <h3>عدد المنتجات</h3>
+                            <p id="total-products-count">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="icon red"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        <div class="info">
+                            <h3>نقص المخزون</h3>
+                            <p id="low-stock-count">0</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="charts-container">
+                    <div class="chart-box">
+                        <h3>المبيعات خلال الأسبوع</h3>
+                        <canvas id="salesChart"></canvas>
+                    </div>
+                    <div class="chart-box">
+                        <h3>الأكثر مبيعاً</h3>
+                        <canvas id="topProductsChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings Section -->
+            <section id="settings" class="section">
+                <div class="section-header">
+                    <h2>الإعدادات</h2>
+                </div>
+                <div class="settings-grid">
+                    <div class="setting-card">
+                        <h3>بيانات المتجر</h3>
+                        <form id="store-settings-form">
+                            <div class="form-group">
+                                <label>اسم المتجر</label>
+                                <input type="text" id="store-name" class="form-input" value="متجري">
+                            </div>
+                            <div class="form-group">
+                                <label>العنوان</label>
+                                <input type="text" id="store-address" class="form-input" value="الرياض، المملكة العربية السعودية">
+                            </div>
+                            <div class="form-group">
+                                <label>رقم الهاتف</label>
+                                <input type="text" id="store-phone" class="form-input" value="0500000000">
+                            </div>
+                            <div class="form-group">
+                                <label>الضريبة (%)</label>
+                                <input type="number" id="tax-rate" class="form-input" value="15">
+                            </div>
+                            <button type="submit" class="btn btn-primary">حفظ الإعدادات</button>
+                        </form>
+                    </div>
+                    <div class="setting-card">
+                        <h3>النسخ الاحتياطي</h3>
+                        <p>تصدير قاعدة البيانات كاملة كملف JSON للحفظ الآمن.</p>
+                        <div class="backup-actions">
+                            <button class="btn btn-success" id="backup-btn">
+                                <i class="fa-solid fa-download"></i> تصدير البيانات
+                            </button>
+                            <div class="file-upload-wrapper">
+                                <button class="btn btn-warning" onclick="document.getElementById('restore-file').click()">
+                                    <i class="fa-solid fa-upload"></i> استرجاع البيانات
+                                </button>
+                                <input type="file" id="restore-file" accept=".json" hidden>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    
+    <!-- Product Modal -->
+    <div class="modal" id="product-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="product-modal-title">إضافة منتج جديد</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="product-form">
+                    <input type="hidden" id="prod-id">
+                    <div class="form-row">
+                        <div class="form-group col-2">
+                            <label>اسم المنتج</label>
+                            <input type="text" id="prod-name" class="form-input" required>
+                        </div>
+                        <div class="form-group col-1">
+                            <label>الباركود</label>
+                            <div class="input-group">
+                                <input type="text" id="prod-barcode" class="form-input" required>
+                                <button type="button" id="generate-barcode" class="btn-icon-small"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>الفئة</label>
+                            <select id="prod-category" class="form-input">
+                                <option value="عام">عام</option>
+                                <option value="مشروبات">مشروبات</option>
+                                <option value="مأكولات">مأكولات</option>
+                                <option value="إلكترونيات">إلكترونيات</option>
+                                <option value="ملابس">ملابس</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>سعر الشراء</label>
+                            <input type="number" id="prod-cost" class="form-input" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label>سعر البيع</label>
+                            <input type="number" id="prod-price" class="form-input" step="0.01" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>المخزون الحالي</label>
+                            <input type="number" id="prod-stock" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label>تنبيه نقص المخزون</label>
+                            <input type="number" id="prod-min-stock" class="form-input" value="5">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>رابط الصورة (اختياري)</label>
+                        <input type="text" id="prod-image" class="form-input" placeholder="https://...">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary close-modal-btn">إلغاء</button>
+                        <button type="submit" class="btn btn-primary">حفظ</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Checkout Modal -->
+    <div class="modal" id="checkout-modal">
+        <div class="modal-content small-modal">
+            <div class="modal-header">
+                <h3>إتمام الدفع</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="checkout-summary">
+                    <div class="total-display">
+                        <span>الإجمالي المطلوب</span>
+                        <h2 id="checkout-total">0.00</h2>
+                    </div>
+                </div>
+                <div class="payment-methods">
+                    <label class="payment-option active">
+                        <input type="radio" name="payment" value="cash" checked>
+                        <i class="fa-solid fa-money-bill-1"></i>
+                        <span>نقداً</span>
+                    </label>
+                    <label class="payment-option">
+                        <input type="radio" name="payment" value="card">
+                        <i class="fa-regular fa-credit-card"></i>
+                        <span>بطاقة</span>
+                    </label>
+                </div>
+                <div class="form-group" id="cash-input-group">
+                    <label>المبلغ المدفوع</label>
+                    <input type="number" id="amount-paid" class="form-input large-input" step="0.01">
+                </div>
+                <div class="change-display" id="change-display-group">
+                    <span>الباقي:</span>
+                    <span id="change-amount">0.00</span>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary close-modal-btn">إلغاء (ESC)</button>
+                    <button type="button" id="confirm-payment" class="btn btn-success">تأكيد وطباعة (Enter)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scanner Modal -->
+    <div class="modal" id="scanner-modal">
+        <div class="modal-content small-modal">
+            <div class="modal-header">
+                <h3>مسح الباركود</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="scanner-container">
+                    <video id="scanner-video"></video>
+                </div>
+                <p class="text-center">وجه الكاميرا نحو الباركود</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Receipt Modal (Hidden for printing) -->
+    <div id="receipt-preview" style="display:none;"></div>
+
+    <!-- Scripts -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
